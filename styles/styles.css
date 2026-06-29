@@ -1,0 +1,444 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0b0b0f;
+  color: #e8e8f0;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* ── NAV ─────────────────────────────────────────────────── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 48px;
+  height: 62px;
+  background: linear-gradient(to bottom, rgba(11,11,15,0.98) 70%, transparent);
+}
+
+.nav-logo {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: #fff;
+  text-transform: uppercase;
+  user-select: none;
+}
+.nav-logo span { color: #3B5BDB; }
+
+.nav-links { display: flex; gap: 30px; list-style: none; }
+.nav-links a {
+  color: #888;
+  text-decoration: none;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  transition: color 0.2s;
+}
+.nav-links a:hover, .nav-links a.active { color: #fff; }
+
+.nav-right { display: flex; align-items: center; gap: 20px; }
+
+.nav-icon {
+  color: #888; font-size: 17px; cursor: pointer;
+  background: none; border: none; transition: color 0.2s;
+}
+.nav-icon:hover { color: #fff; }
+
+.nav-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #3B5BDB;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff;
+  cursor: pointer; letter-spacing: 0.5px;
+}
+
+/* ── HERO ────────────────────────────────────────────────── */
+.hero {
+  position: relative;
+  height: 100vh; min-height: 580px;
+  display: flex; align-items: flex-end;
+  padding: 0 64px 90px;
+  overflow: hidden;
+}
+
+.hero-bg-fill {
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, #0b0d1a 0%, #0d1030 50%, #0b0b0f 100%);
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+.hero-glow {
+  position: absolute; top: 10%; right: 15%;
+  width: 600px; height: 400px;
+  background: radial-gradient(ellipse, rgba(59,91,219,0.12) 0%, transparent 70%);
+  z-index: 0;
+}
+
+.hero-overlay {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(to right, rgba(11,11,15,0.96) 30%, rgba(11,11,15,0.3) 80%),
+    linear-gradient(to top, rgba(11,11,15,1) 0%, transparent 55%);
+  z-index: 1;
+}
+
+.hero-content { position: relative; z-index: 2; max-width: 540px; }
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(59,91,219,0.15);
+  border: 1px solid rgba(59,91,219,0.4);
+  border-radius: 4px; padding: 4px 12px;
+  font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: #7B93F5; margin-bottom: 16px;
+}
+
+.hero-title {
+  font-size: clamp(34px, 5vw, 58px);
+  font-weight: 900; line-height: 1.02;
+  letter-spacing: -1.5px; color: #fff; margin-bottom: 14px;
+}
+
+.hero-meta {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 14px; font-size: 13px; color: #777;
+}
+
+.hero-rating { color: #7B93F5; font-weight: 700; font-size: 14px; }
+.dot { color: #333; }
+
+.hero-tags { margin-bottom: 14px; }
+.hero-tags span {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 3px; padding: 3px 9px;
+  font-size: 11px; color: #999; margin-right: 6px; letter-spacing: 0.5px;
+}
+
+.hero-desc {
+  font-size: 14px; line-height: 1.7; color: #888;
+  margin-bottom: 26px; max-width: 400px;
+}
+
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.btn-play {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: #3B5BDB; color: #fff; border: none;
+  border-radius: 6px; padding: 11px 26px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  letter-spacing: 0.3px; transition: background 0.2s, transform 0.15s;
+}
+.btn-play:hover { background: #4C6EF5; transform: translateY(-2px); }
+
+.btn-more {
+  display: inline-flex; align-items: center; gap: 9px;
+  background: rgba(255,255,255,0.07); color: #ccc;
+  border: 1px solid rgba(255,255,255,0.11);
+  border-radius: 6px; padding: 11px 26px;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-more:hover { background: rgba(255,255,255,0.13); color: #fff; }
+
+/* ── SECTIONS ────────────────────────────────────────────── */
+.sections { padding: 8px 48px 70px; background: #0b0b0f; }
+.section { margin-bottom: 48px; }
+
+.section-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 18px;
+}
+
+.section-title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 700; color: #e8e8f0; letter-spacing: 0.2px;
+}
+.section-title::before {
+  content: ''; display: block;
+  width: 3px; height: 17px;
+  background: #3B5BDB; border-radius: 2px;
+}
+
+.section-tabs { display: flex; gap: 2px; }
+.tab {
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  color: #555; font-size: 13px;
+  padding: 4px 12px; cursor: pointer;
+  transition: color 0.18s, border-color 0.18s;
+}
+.tab.active { color: #7B93F5; border-bottom-color: #3B5BDB; }
+.tab:hover:not(.active) { color: #aaa; }
+
+/* ── SCROLL ROW ──────────────────────────────────────────── */
+.scroll-row {
+  display: flex; gap: 13px;
+  overflow-x: auto; padding-bottom: 10px;
+  scroll-behavior: smooth;
+  scrollbar-width: thin; scrollbar-color: #1e1e28 transparent;
+}
+.scroll-row::-webkit-scrollbar { height: 4px; }
+.scroll-row::-webkit-scrollbar-thumb { background: #1e1e28; border-radius: 2px; }
+
+/* ── MOVIE CARD ──────────────────────────────────────────── */
+.card {
+  flex: 0 0 175px; border-radius: 8px; overflow: hidden;
+  background: #13131a; cursor: pointer; position: relative;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+.card:hover {
+  transform: translateY(-7px) scale(1.025);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.75), 0 0 0 1px rgba(59,91,219,0.25);
+  z-index: 10;
+}
+
+.card-poster {
+  width: 100%; aspect-ratio: 2/3;
+  object-fit: cover; display: block;
+}
+
+.card-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: #3B5BDB; color: #fff;
+  font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  padding: 3px 7px; border-radius: 3px;
+}
+
+.card-info { padding: 10px 12px 13px; }
+.card-title {
+  font-size: 13px; font-weight: 600; color: #ddd;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+.card-meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #555; }
+.card-star { color: #7B93F5; }
+
+/* ── TOP 10 ──────────────────────────────────────────────── */
+.top10-row {
+  display: flex; gap: 0; overflow-x: auto; padding-bottom: 10px;
+  scrollbar-width: thin; scrollbar-color: #1e1e28 transparent;
+}
+.top10-row::-webkit-scrollbar { height: 4px; }
+
+.top10-item {
+  flex: 0 0 155px; position: relative;
+  cursor: pointer; transition: transform 0.2s;
+}
+.top10-item:hover { transform: scale(1.04); z-index: 10; }
+
+.top10-num {
+  position: absolute; bottom: 24px; left: -8px;
+  font-size: 84px; font-weight: 900; line-height: 1;
+  color: transparent; -webkit-text-stroke: 3px #ddd;
+  z-index: 2; user-select: none; pointer-events: none;
+}
+
+.top10-img-placeholder {
+  margin-left: 34px; width: calc(100% - 34px);
+  aspect-ratio: 2/3; border-radius: 7px;
+  object-fit: cover; display: block;
+}
+
+/* ── MODAL BACKDROP ──────────────────────────────────────── */
+/* The backdrop covers the whole viewport, hidden by default */
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  /* Hidden by default — no opacity/pointer-events */
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+
+/* When JS adds .open class, it becomes visible and clickable */
+.modal-backdrop.open {
+  opacity: 1; pointer-events: all;
+}
+
+/* ── MODAL CONTENT BOX ────────────────────────────────────── */
+.modal-content {
+  position: relative;
+  width: min(1200px, 94vw);
+  max-height: 95vh;
+  overflow-y: auto;
+  background: #13131a;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.8);
+  scrollbar-width: thin; scrollbar-color: #1e1e28 transparent;
+}
+
+.modal-close {
+  position: absolute; top: 14px; right: 16px;
+  background: rgba(255,255,255,0.1); border: none;
+  color: #fff; font-size: 16px; width: 32px; height: 32px;
+  border-radius: 50%; cursor: pointer; z-index: 10;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.modal-close:hover { background: rgba(255,255,255,0.2); }
+
+/* ── TRAILER EMBED ────────────────────────────────────────── */
+/* 16:9 aspect ratio trick using padding-top */
+.modal-trailer-wrap {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* 9/16 = 56.25% — this is the classic responsive iframe trick */
+  background: #000;
+}
+
+.modal-trailer, .no-trailer {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  border: none;
+}
+
+.no-trailer {
+  display: flex; align-items: center; justify-content: center;
+  color: #555; font-size: 14px; background: #0a0a0f;
+}
+
+/* ── MODAL INFO ───────────────────────────────────────────── */
+.modal-info { padding: 24px 28px 32px; }
+
+.modal-title {
+  font-size: 26px; font-weight: 900;
+  color: #fff; margin-bottom: 6px;
+  letter-spacing: -0.5px;
+}
+
+.modal-tagline {
+  color: #7B93F5; font-size: 13px;
+  font-style: italic; margin-bottom: 14px;
+}
+
+.modal-meta-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: #666; margin-bottom: 12px;
+}
+.modal-rating { color: #7B93F5; font-weight: 700; }
+
+.badge-adult {
+  background: #c0392b; color: #fff;
+  font-size: 10px; font-weight: 700;
+  padding: 2px 6px; border-radius: 3px; letter-spacing: 0.5px;
+}
+
+.modal-genres { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+.modal-genres span {
+  background: rgba(59,91,219,0.12);
+  border: 1px solid rgba(59,91,219,0.3);
+  color: #7B93F5; font-size: 11px;
+  padding: 3px 10px; border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
+.modal-overview {
+  font-size: 14px; line-height: 1.75; color: #888;
+  margin-bottom: 24px;
+}
+
+.btn-watch-now {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #3B5BDB; color: #fff; border: none;
+  border-radius: 7px; padding: 13px 30px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 0.2s, transform 0.15s;
+}
+.btn-watch-now:hover { background: #4C6EF5; transform: translateY(-2px); }
+
+/* ── VIDKING PLAYER ───────────────────────────────────────── */
+.player-title {
+  padding: 18px 28px 12px;
+  font-size: 18px; font-weight: 700; color: #fff;
+}
+
+.vidking-player {
+  display: block; width: 100%;
+  /* 16:9 height: use aspect-ratio or calc */
+  aspect-ratio: 16/9;
+  border: none; background: #000;
+}
+
+.player-progress-bar {
+  height: 3px; background: #1e1e28; margin: 0;
+}
+.player-progress-fill {
+  height: 100%; width: 0%;
+  background: #3B5BDB; transition: width 0.5s;
+}
+
+.player-status {
+  padding: 8px 16px; font-size: 12px; color: #555;
+  text-align: right;
+}
+
+/* ── LOADING STATE ────────────────────────────────────────── */
+.modal-loading {
+  display: flex; align-items: center; justify-content: center;
+  height: 300px; color: #555; font-size: 14px;
+}
+
+/* ── FULLSCREEN PLAYER OVERLAY ────────────────────────────── */
+/* Sits above everything — z-index 300 > modal's 200 */
+.player-overlay {
+  position: fixed; inset: 0;
+  background: #000;
+  z-index: 300;
+  display: flex; flex-direction: column;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.player-overlay.open { opacity: 1; pointer-events: all; }
+
+.player-topbar {
+  flex: 0 0 48px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  background: rgba(0,0,0,0.8);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.player-movie-title {
+  font-size: 14px; font-weight: 600; color: #ccc;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 70%;
+}
+
+.player-close-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: #ccc; font-size: 13px;
+  padding: 5px 14px; border-radius: 5px;
+  cursor: pointer; transition: background 0.2s;
+  white-space: nowrap;
+}
+.player-close-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+/* The iframe fills ALL remaining height after the top bar */
+.vidking-full-iframe {
+  flex: 1 1 0;
+  width: 100%;
+  border: none;
+  display: block;
+  min-height: 0; /* flex child needs this to shrink properly */
+}
+
+.player-progress-bar {
+  flex: 0 0 3px;
+  background: #1a1a24;
+}
+.player-progress-fill {
+  height: 100%; width: 0%;
+  background: #3B5BDB; transition: width 0.5s;
+}
