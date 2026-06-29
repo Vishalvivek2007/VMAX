@@ -20,6 +20,14 @@ const io     = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    service: "vmax",
+    mongo: mongoose.connection.readyState === 1 ? "connected" : "connecting"
+  });
+});
+
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, "../frontend")));
 
@@ -35,8 +43,22 @@ mongoose.connect(MONGO_URI)
   .catch(err => console.error("❌ MongoDB error:", err));
 
 // ── Socket.io — Watch Room Sync ───────────────────────────
-// roomStates: { [roomCode]: { movieId, movieTitle, playing, currentTime, lastUpdate } }
+// roomStates: { [roomCode]: { movieId, movieTitle, mediaType, playing, currentTime, lastUpdate } }
 const roomStates = {};
+
+function stateForJoin(roomCode) {
+  const state = roomStates[roomCode];
+  if (!state) return null;
+
+  const elapsed = state.playing && state.lastUpdate
+    ? (Date.now() - state.lastUpdate) / 1000
+    : 0;
+
+  return {
+    ...state,
+    currentTime: (Number(state.currentTime) || 0) + elapsed
+  };
+}
 
 io.on("connection", (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
@@ -48,8 +70,9 @@ io.on("connection", (socket) => {
     socket.username = username || "Guest";
 
     // Send current room state to the new joiner
-    if (roomStates[roomCode]) {
-      socket.emit("room-state", roomStates[roomCode]);
+    const currentState = stateForJoin(roomCode);
+    if (currentState) {
+      socket.emit("room-state", currentState);
     }
 
     // Notify others
@@ -63,13 +86,17 @@ io.on("connection", (socket) => {
   });
 
   // Host sets the movie
-  socket.on("room-set-movie", ({ roomCode, movieId, movieTitle }) => {
+  socket.on("room-set-movie", ({ roomCode, movieId, movieTitle, mediaType, season, episode }) => {
     if (!roomStates[roomCode]) roomStates[roomCode] = {};
     roomStates[roomCode].movieId    = movieId;
     roomStates[roomCode].movieTitle = movieTitle;
+    roomStates[roomCode].mediaType  = mediaType || "movie";
+    roomStates[roomCode].season     = season || 1;
+    roomStates[roomCode].episode    = episode || 1;
     roomStates[roomCode].playing    = false;
     roomStates[roomCode].currentTime = 0;
-    io.to(roomCode).emit("room-movie-changed", { movieId, movieTitle });
+    roomStates[roomCode].lastUpdate  = Date.now();
+    socket.to(roomCode).emit("room-movie-changed", { movieId, movieTitle, mediaType, season, episode });
   });
 
   // Play event
@@ -86,6 +113,7 @@ io.on("connection", (socket) => {
     if (!roomStates[roomCode]) roomStates[roomCode] = {};
     roomStates[roomCode].playing     = false;
     roomStates[roomCode].currentTime = currentTime;
+    roomStates[roomCode].lastUpdate  = Date.now();
     socket.to(roomCode).emit("sync-pause", { currentTime, username: socket.username });
   });
 
@@ -93,6 +121,7 @@ io.on("connection", (socket) => {
   socket.on("room-seek", ({ roomCode, currentTime }) => {
     if (!roomStates[roomCode]) roomStates[roomCode] = {};
     roomStates[roomCode].currentTime = currentTime;
+    roomStates[roomCode].lastUpdate  = Date.now();
     socket.to(roomCode).emit("sync-seek", { currentTime, username: socket.username });
   });
 

@@ -1,7 +1,8 @@
 // ── CONFIG ───────────────────────────────────────────────────
 const TOKEN_KEY   = "vmax_token";
 const USER_KEY    = "vmax_user";
-const API_BASE    = "http://localhost:3000/api";
+const APP_ORIGIN  = window.location.origin;
+const API_BASE    = `${APP_ORIGIN}/api`;
 const TMDB_TOKEN  = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkMjFhNzExNTRjZjU2OTUwOWY2ZjAzNzM5ZTRhMzNkYSIsIm5iZiI6MTc4MjQ3NDYzOC40MzM5OTk4LCJzdWIiOiI2YTNlNjc4ZTdiOGY3Y2VlYmZmMDFkYWIiLCJzY29wZXMiOlsiYXBpX3JlYWQiXSwidmVyc2lvbiI6MX0.ZEh-4iIW3Ey68V69l_RbkgWI57A2wKsYAvp6--zzBls";
 const TMDB_BASE   = "https://api.themoviedb.org/3";
 const IMG_BASE    = "https://image.tmdb.org/t/p/w500";
@@ -17,6 +18,9 @@ let userWatchlist    = [];
 let currentSection   = "home";
 let socket           = null;
 let currentRoom      = null;
+let currentRoomMovie = null;
+let currentPlayer    = null;
+let applyingRoomSync = false;
 let searchTimeout    = null;
 let seriesLoaded     = false;
 
@@ -254,6 +258,7 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") closeAllModa
 function closeModal() {
   modal.classList.remove("open");
   modalBody.innerHTML = "";
+  currentPlayer = null;
 }
 
 function closeAllModals() {
@@ -436,13 +441,54 @@ function openPlayer(movieId, title, mediaType = "movie") {
     openPlayerTV(movieId, title, 1, 1);
     return;
   }
-  const url = `${VIDKING}/${movieId}?color=${ACCENT}&autoPlay=true`;
-  _showPlayer(url, title);
+  openRoomPlayer({ movieId, title, mediaType });
 }
 
 function openPlayerTV(tvId, showName, season, episode) {
-  const url = `${VIDKING_TV}/${tvId}-${season}-${episode}?color=${ACCENT}&autoPlay=true`;
-  _showPlayer(url, `${showName} — S${String(season).padStart(2,"0")}E${String(episode).padStart(2,"0")}`);
+  openRoomPlayer({ movieId: tvId, title: showName, mediaType: "tv", season, episode });
+}
+
+function playerUrlFor(item, options = {}) {
+  const mediaType = item.mediaType || "movie";
+  const id = mediaType === "tv"
+    ? `${item.movieId}-${item.season || 1}-${item.episode || 1}`
+    : item.movieId;
+  const base = mediaType === "tv" ? VIDKING_TV : VIDKING;
+  const url = new URL(`${base}/${id}`);
+  url.searchParams.set("color", ACCENT);
+  url.searchParams.set("autoPlay", options.autoplay === false ? "false" : "true");
+
+  const startAt = Number(options.currentTime);
+  if (Number.isFinite(startAt) && startAt > 0) {
+    url.searchParams.set("startAt", Math.floor(startAt));
+    url.searchParams.set("t", Math.floor(startAt));
+  }
+
+  return url.toString();
+}
+
+function openRoomPlayer(item, options = {}) {
+  const normalized = {
+    movieId: item.movieId,
+    title: item.title || item.movieTitle || "Now Playing",
+    mediaType: item.mediaType || "movie",
+    season: item.season || 1,
+    episode: item.episode || 1
+  };
+
+  if (options.roomSynced) currentRoomMovie = normalized;
+  currentPlayer = {
+    ...normalized,
+    currentTime: Number(options.currentTime) || 0,
+    playing: options.playing ?? false,
+    roomSynced: !!options.roomSynced
+  };
+
+  const displayTitle = normalized.mediaType === "tv"
+    ? `${normalized.title} - S${String(normalized.season).padStart(2,"0")}E${String(normalized.episode).padStart(2,"0")}`
+    : normalized.title;
+
+  _showPlayer(playerUrlFor(normalized, options), displayTitle);
 }
 
 function _showPlayer(url, title) {
@@ -459,9 +505,11 @@ function _showPlayer(url, title) {
 
 function handlePlayerMessage(event) {
   try {
-    const msg = JSON.parse(event.data);
+    const msg = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
     if (msg.type !== "PLAYER_EVENT") return;
     const { event: evtName, progress } = msg.data;
+    const currentTime = Number(msg.data.currentTime || msg.data.time || 0);
+    if (currentPlayer && Number.isFinite(currentTime)) currentPlayer.currentTime = currentTime;
     const fill   = document.getElementById("progress-fill");
     const status = document.getElementById("player-status");
     if (fill && progress != null) fill.style.width = `${Math.min(progress, 100)}%`;
@@ -471,11 +519,59 @@ function handlePlayerMessage(event) {
       if (evtName === "ended") status.textContent = "✓ Finished";
     }
     // Sync to room if in one
-    if (currentRoom && socket) {
-      if (evtName === "play")  socket.emit("room-play",  { roomCode: currentRoom, currentTime: msg.data.currentTime || 0 });
-      if (evtName === "pause") socket.emit("room-pause", { roomCode: currentRoom, currentTime: msg.data.currentTime || 0 });
+    if (currentRoom && socket && currentPlayer?.roomSynced && !applyingRoomSync) {
+      if (evtName === "play")  socket.emit("room-play",  { roomCode: currentRoom, currentTime });
+      if (evtName === "pause") socket.emit("room-pause", { roomCode: currentRoom, currentTime });
+      if (evtName === "seeked" || evtName === "seek") socket.emit("room-seek", { roomCode: currentRoom, currentTime });
     }
   } catch (e) {}
+}
+
+function postPlayerCommand(action, currentTime) {
+  const iframe = document.querySelector(".vidking-player");
+  if (!iframe?.contentWindow) return false;
+
+  const payloads = [
+    { type: "PLAYER_COMMAND", action, currentTime },
+    { type: "PLAYER_COMMAND", event: action, data: { currentTime } },
+    { type: "CONTROL_PLAYER", action, time: currentTime }
+  ];
+
+  payloads.forEach(payload => {
+    iframe.contentWindow.postMessage(JSON.stringify(payload), "*");
+    iframe.contentWindow.postMessage(payload, "*");
+  });
+
+  return true;
+}
+
+function applyRoomSync(action, currentTime = 0, username = "Someone") {
+  if (!currentRoomMovie) {
+    addChatMessage("system", `${username} changed playback, but no movie is open yet`);
+    return;
+  }
+
+  applyingRoomSync = true;
+  currentPlayer = {
+    ...(currentPlayer || currentRoomMovie),
+    currentTime,
+    playing: action === "play"
+  };
+
+  postPlayerCommand(action, currentTime);
+  setTimeout(() => {
+    applyingRoomSync = false;
+  }, 2500);
+
+  openRoomPlayer(currentRoomMovie, {
+    currentTime,
+    playing: action === "play",
+    autoplay: action !== "pause",
+    roomSynced: true
+  });
+
+  const status = document.getElementById("player-status");
+  if (status) status.textContent = `${username} ${action === "play" ? "played" : action === "pause" ? "paused" : "seeked"} the room`;
 }
 
 // ── SEARCH ───────────────────────────────────────────────────
@@ -670,7 +766,8 @@ function enterRoom(code, isHost) {
   document.getElementById("room-hud").style.display = "block";
 
   // Connect socket
-  socket = io("http://localhost:3000");
+  if (socket) socket.disconnect();
+  socket = io(APP_ORIGIN);
   socket.emit("join-room", { roomCode: code, username: currentUser?.username || "Guest" });
 
   socket.on("member-count", count => {
@@ -684,9 +781,39 @@ function enterRoom(code, isHost) {
     addChatMessage(username, message, time);
   });
 
-  socket.on("room-movie-changed", ({ movieTitle }) => {
+  socket.on("room-state", state => {
+    if (!state?.movieId) return;
+    currentRoomMovie = {
+      movieId: state.movieId,
+      title: state.movieTitle,
+      mediaType: state.mediaType || "movie",
+      season: state.season || 1,
+      episode: state.episode || 1
+    };
+    openRoomPlayer(currentRoomMovie, {
+      currentTime: state.currentTime || 0,
+      playing: !!state.playing,
+      autoplay: !!state.playing,
+      roomSynced: true
+    });
+    addChatMessage("system", `Synced to room: ${state.movieTitle}`);
+  });
+
+  socket.on("room-movie-changed", ({ movieId, movieTitle, mediaType, season, episode }) => {
+    currentRoomMovie = {
+      movieId,
+      title: movieTitle,
+      mediaType: mediaType || "movie",
+      season: season || 1,
+      episode: episode || 1
+    };
+    openRoomPlayer(currentRoomMovie, { autoplay: true, roomSynced: true });
     addChatMessage("system", `Now watching: ${movieTitle}`);
   });
+
+  socket.on("sync-play", ({ currentTime, username }) => applyRoomSync("play", currentTime, username));
+  socket.on("sync-pause", ({ currentTime, username }) => applyRoomSync("pause", currentTime, username));
+  socket.on("sync-seek", ({ currentTime, username }) => applyRoomSync("seek", currentTime, username));
 
   // Show toast
   showToast(isHost ? `Room created! Code: ${code}` : `Joined room ${code}`);
@@ -739,8 +866,9 @@ function addChatMessage(username, message, time) {
 
 function watchInRoom(movieId, title, mediaType) {
   if (!socket || !currentRoom) return;
-  socket.emit("room-set-movie", { roomCode: currentRoom, movieId, movieTitle: title });
-  openPlayer(movieId, title, mediaType);
+  currentRoomMovie = { movieId, title, mediaType: mediaType || "movie", season: 1, episode: 1 };
+  socket.emit("room-set-movie", { roomCode: currentRoom, movieId, movieTitle: title, mediaType });
+  openRoomPlayer(currentRoomMovie, { autoplay: true, roomSynced: true });
 }
 
 // ── TABS ─────────────────────────────────────────────────────
