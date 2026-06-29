@@ -267,7 +267,7 @@ nav {
 /* ── MODAL CONTENT BOX ────────────────────────────────────── */
 .modal-content {
   position: relative;
-  width: min(1200px, 94vw);
+  width: min(1100px, 94vw);
   max-height: 95vh;
   overflow-y: auto;
   background: #13131a;
