@@ -43,7 +43,12 @@ app.get("/api/warmup", (req, res) => {
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, "../frontend"), {
   maxAge: "1h",
-  etag: true
+  etag: true,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".html") || filePath.endsWith(".js")) {
+      res.setHeader("Cache-Control", "no-cache");
+    }
+  }
 }));
 
 // ── API Routes ────────────────────────────────────────────

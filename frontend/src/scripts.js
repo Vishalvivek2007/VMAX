@@ -477,6 +477,10 @@ function playerUrlFor(item, options = {}) {
     : new URL(`${VIDKING}/${item.movieId}`);
   url.searchParams.set("color", ACCENT);
   url.searchParams.set("autoPlay", options.autoplay === false ? "false" : "true");
+  if (mediaType === "tv") {
+    url.searchParams.set("nextEpisode", "true");
+    url.searchParams.set("episodeSelector", "true");
+  }
 
   const startAt = Number(options.currentTime);
   if (Number.isFinite(startAt) && startAt > 0) {
