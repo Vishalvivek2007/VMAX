@@ -472,18 +472,15 @@ function openPlayerTV(tvId, showName, season, episode) {
 
 function playerUrlFor(item, options = {}) {
   const mediaType = item.mediaType || "movie";
-  const id = mediaType === "tv"
-    ? `${item.movieId}-${item.season || 1}-${item.episode || 1}`
-    : item.movieId;
-  const base = mediaType === "tv" ? VIDKING_TV : VIDKING;
-  const url = new URL(`${base}/${id}`);
+  const url = mediaType === "tv"
+    ? new URL(`${VIDKING_TV}/${item.movieId}/${item.season || 1}/${item.episode || 1}`)
+    : new URL(`${VIDKING}/${item.movieId}`);
   url.searchParams.set("color", ACCENT);
   url.searchParams.set("autoPlay", options.autoplay === false ? "false" : "true");
 
   const startAt = Number(options.currentTime);
   if (Number.isFinite(startAt) && startAt > 0) {
-    url.searchParams.set("startAt", Math.floor(startAt));
-    url.searchParams.set("t", Math.floor(startAt));
+    url.searchParams.set("progress", Math.floor(startAt));
   }
 
   return url.toString();
