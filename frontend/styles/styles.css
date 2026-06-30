@@ -76,15 +76,15 @@ nav {
 .hero-glow {
   position: absolute; top: 10%; right: 15%;
   width: 600px; height: 400px;
-  background: radial-gradient(ellipse, rgba(59,91,219,0.12) 0%, transparent 70%);
+  background: radial-gradient(ellipse, rgba(59,91,219,0.2) 0%, transparent 70%);
   z-index: 0;
 }
 
 .hero-overlay {
   position: absolute; inset: 0;
   background:
-    linear-gradient(to right, rgba(11,11,15,0.96) 30%, rgba(11,11,15,0.3) 80%),
-    linear-gradient(to top, rgba(11,11,15,1) 0%, transparent 55%);
+    linear-gradient(to right, rgba(11,11,15,0.78) 28%, rgba(11,11,15,0.2) 78%),
+    linear-gradient(to top, rgba(11,11,15,0.82) 0%, rgba(11,11,15,0.08) 58%);
   z-index: 1;
 }
 
@@ -107,7 +107,7 @@ nav {
 
 .hero-meta {
   display: flex; align-items: center; gap: 10px;
-  margin-bottom: 14px; font-size: 13px; color: #777;
+  margin-bottom: 14px; font-size: 13px; color: #9a9a9a;
 }
 
 .hero-rating { color: #7B93F5; font-weight: 700; font-size: 14px; }
@@ -122,7 +122,7 @@ nav {
 }
 
 .hero-desc {
-  font-size: 14px; line-height: 1.7; color: #888;
+  font-size: 14px; line-height: 1.7; color: #b0b0b0;
   margin-bottom: 26px; max-width: 400px;
 }
 
