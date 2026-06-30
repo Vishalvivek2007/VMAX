@@ -16,6 +16,9 @@ const io     = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
 // ── Middleware ────────────────────────────────────────────
 app.use(cors());
 app.use(express.json());
@@ -28,8 +31,20 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.get("/api/warmup", (req, res) => {
+  res.json({
+    ok: true,
+    service: "vmax",
+    warmedAt: new Date().toISOString(),
+    mongo: mongoose.connection.readyState === 1 ? "connected" : "connecting"
+  });
+});
+
 // Serve frontend static files
-app.use(express.static(path.join(__dirname, "../frontend")));
+app.use(express.static(path.join(__dirname, "../frontend"), {
+  maxAge: "1h",
+  etag: true
+}));
 
 // ── API Routes ────────────────────────────────────────────
 app.use("/api/auth",      authRoutes);

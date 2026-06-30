@@ -24,6 +24,10 @@ let applyingRoomSync = false;
 let searchTimeout    = null;
 let seriesLoaded     = false;
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // ── TMDB FETCH ───────────────────────────────────────────────
 async function tmdb(endpoint, params = "") {
   const url = `${TMDB_BASE}${endpoint}?language=en-US&${params}`;
@@ -42,8 +46,26 @@ async function api(method, path, body = null) {
   };
   if (authToken) opts.headers["Authorization"] = `Bearer ${authToken}`;
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(`${API_BASE}${path}`, opts);
-  return res.json();
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await fetch(`${API_BASE}${path}`, opts);
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) return data;
+      if (![502, 503, 504].includes(res.status) || attempt === 3) {
+        return data.error ? data : { error: data.message || `Request failed (${res.status})` };
+      }
+    } catch (err) {
+      if (attempt === 3) {
+        return { error: "Server is waking up. Please try again in a few seconds." };
+      }
+    }
+
+    await sleep(900 * (attempt + 1));
+  }
+
+  return { error: "Server is waking up. Please try again in a few seconds." };
 }
 
 // ── INIT ─────────────────────────────────────────────────────
@@ -744,6 +766,7 @@ function closeRoomModal() {
 }
 
 async function createRoom() {
+  await warmBackend();
   const data = await api("POST", "/rooms/create", {});
   if (data.error) { document.getElementById("room-error").textContent = data.error; return; }
   enterRoom(data.room.code, true);
@@ -751,6 +774,7 @@ async function createRoom() {
 }
 
 async function joinRoom() {
+  await warmBackend();
   const code = document.getElementById("join-code-input").value.trim().toUpperCase();
   if (code.length !== 6) { document.getElementById("room-error").textContent = "Enter a valid 6-character code"; return; }
 
@@ -760,6 +784,10 @@ async function joinRoom() {
   closeRoomModal();
 }
 
+async function warmBackend() {
+  await api("GET", "/warmup");
+}
+
 function enterRoom(code, isHost) {
   currentRoom = code;
   document.getElementById("hud-code").textContent = code;
@@ -767,8 +795,23 @@ function enterRoom(code, isHost) {
 
   // Connect socket
   if (socket) socket.disconnect();
-  socket = io(APP_ORIGIN);
+  socket = io(APP_ORIGIN, {
+    reconnection: true,
+    reconnectionAttempts: 8,
+    reconnectionDelay: 800,
+    reconnectionDelayMax: 4000,
+    timeout: 20000
+  });
   socket.emit("join-room", { roomCode: code, username: currentUser?.username || "Guest" });
+
+  socket.on("connect_error", () => {
+    addChatMessage("system", "Connecting to the room server...");
+  });
+
+  socket.io.on("reconnect", () => {
+    socket.emit("join-room", { roomCode: code, username: currentUser?.username || "Guest" });
+    addChatMessage("system", "Reconnected to the room");
+  });
 
   socket.on("member-count", count => {
     document.getElementById("hud-member-count").textContent = count;

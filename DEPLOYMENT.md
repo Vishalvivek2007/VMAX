@@ -1,35 +1,47 @@
-# VMAX Deployment Guide: Free, No Cold Starts
+# VMAX Render Deployment Guide
 
-Best free option for VMAX: deploy it on an Oracle Cloud Always Free VM.
+VMAX deploys to Render as one Node Web Service.
 
-This avoids Render-style cold starts because your app runs on an always-on virtual machine. Express serves the backend, Socket.io, and the static frontend from one Node process.
+The backend is `backend/server.js`. It also serves the frontend from `frontend/`, so you do not deploy frontend and backend separately.
 
-## What You Need
+## What Render Runs
 
-- GitHub repo with this project pushed
-- MongoDB Atlas connection string
-- Oracle Cloud account
-- Optional but recommended: a domain name
+Render uses these commands:
 
-## 1. Prepare MongoDB Atlas
-
-1. Open MongoDB Atlas.
-2. Go to Database Access and create a database user.
-3. Go to Network Access.
-4. Add your Oracle VM public IP after creating the VM.
-5. For quick testing only, you can temporarily allow:
-
-```text
-0.0.0.0/0
+```bash
+npm install
+npm start
 ```
 
-6. Copy your connection string:
+`npm start` runs:
 
-```text
-mongodb+srv://USER:PASSWORD@cluster-name.mongodb.net/vmax
+```bash
+node backend/server.js
 ```
 
-## 2. Stop Tracking Local Secrets
+That one server provides:
+
+```text
+Frontend: https://YOUR-APP.onrender.com
+Backend:  https://YOUR-APP.onrender.com/api/...
+Socket.io: https://YOUR-APP.onrender.com/socket.io/...
+Health:   https://YOUR-APP.onrender.com/health
+Warmup:   https://YOUR-APP.onrender.com/api/warmup
+```
+
+## Cold Start Reality
+
+Render free web services spin down after inactivity. That cannot be fully removed on the free plan.
+
+This project is tuned to make it smoother:
+
+- `/health` is lightweight for Render health checks.
+- `/api/warmup` gives the frontend a cheap endpoint to wake the backend.
+- API requests retry temporary `502`, `503`, and `504` wakeup errors.
+- Socket.io reconnects automatically.
+- Static frontend files are cached for quicker repeat loads.
+
+## 1. Clean Secrets Before Pushing
 
 Your `.env` file contains real secrets and should not be pushed.
 
@@ -37,201 +49,169 @@ Run this once locally:
 
 ```bash
 git rm --cached .env
-git add .gitignore .env.example DEPLOYMENT.md ecosystem.config.cjs deploy/Caddyfile.example package.json backend/server.js frontend/src/scripts.js
-git commit -m "Prepare VMAX for VPS deployment"
+git add .gitignore .env.example render.yaml DEPLOYMENT.md package.json backend/server.js frontend/src/scripts.js
+git commit -m "Prepare VMAX for Render deployment"
 git push
 ```
 
 If `.env` was ever pushed to GitHub, rotate the MongoDB password and JWT secret.
 
-## 3. Create the Oracle Always Free VM
+## 2. Prepare MongoDB Atlas
 
-1. Open Oracle Cloud.
-2. Go to Compute, then Instances.
-3. Click Create instance.
-4. Image: Ubuntu 22.04 or Ubuntu 24.04.
-5. Shape: choose an Always Free eligible shape.
-6. Add or generate an SSH key.
-7. Create the instance.
-8. Copy the public IP.
-
-In the Oracle instance security list, allow:
+1. Open MongoDB Atlas.
+2. Go to Database Access.
+3. Create a database user.
+4. Go to Network Access.
+5. For Render free/easy setup, add:
 
 ```text
-TCP 22
-TCP 80
-TCP 443
-TCP 3000
+0.0.0.0/0
 ```
 
-You can remove `3000` later if you use a domain with Caddy.
+6. Go to Database, then Connect, then Drivers.
+7. Copy your connection string.
 
-## 4. SSH Into the VM
-
-From your computer:
-
-```bash
-ssh ubuntu@YOUR_VM_PUBLIC_IP
-```
-
-If Oracle gives you an `opc` user instead:
-
-```bash
-ssh opc@YOUR_VM_PUBLIC_IP
-```
-
-## 5. Install Node, Git, PM2, and Caddy
-
-Run on the VM:
-
-```bash
-sudo apt update
-sudo apt install -y git curl
-curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-sudo apt install -y nodejs
-sudo npm install -g pm2
-sudo apt install -y caddy
-```
-
-Check versions:
-
-```bash
-node -v
-npm -v
-pm2 -v
-```
-
-## 6. Clone and Configure VMAX
-
-```bash
-git clone https://github.com/Vishalvivek2007/VMAX.git
-cd VMAX
-npm install
-cp .env.example .env
-nano .env
-```
-
-Fill `.env`:
+It should look like:
 
 ```text
-PORT=3000
+mongodb+srv://USER:PASSWORD@cluster-name.mongodb.net/vmax
+```
+
+Make sure it has a database name like `/vmax` before any query params.
+
+## 3. Deploy With Render Blueprint
+
+1. Go to Render.
+2. Click New.
+3. Click Blueprint.
+4. Connect GitHub if needed.
+5. Select the `Vishalvivek2007/VMAX` repo.
+6. Render reads `render.yaml`.
+7. When Render asks for environment variables, fill:
+
+```text
 MONGO_URI=your-mongodb-atlas-uri
 JWT_SECRET=your-long-random-secret
 API_READ_ACCESS=your-tmdb-read-access-token
 API_KEY=your-tmdb-api-key
 ```
 
-Save in nano:
+8. Click Apply.
+9. Wait for the first deploy to finish.
+
+## 4. Manual Render Setup If Blueprint Is Annoying
+
+Use this if you choose New Web Service instead of Blueprint.
+
+1. Go to Render.
+2. Click New.
+3. Click Web Service.
+4. Connect the GitHub repo.
+5. Settings:
 
 ```text
-Ctrl+O
-Enter
-Ctrl+X
+Name: vmax
+Runtime: Node
+Branch: main
+Root Directory: leave blank
+Build Command: npm install
+Start Command: npm start
+Instance Type: Free
+Health Check Path: /health
+Auto-Deploy: Yes
 ```
 
-## 7. Start the App Forever
-
-```bash
-npm run pm2:start
-pm2 save
-pm2 startup
-```
-
-The `pm2 startup` command prints another command. Copy and run that printed command too.
-
-Check logs:
-
-```bash
-npm run pm2:logs
-```
-
-Open:
+6. Add environment variables:
 
 ```text
-http://YOUR_VM_PUBLIC_IP:3000
-http://YOUR_VM_PUBLIC_IP:3000/health
+NODE_ENV=production
+MONGO_URI=your-mongodb-atlas-uri
+JWT_SECRET=your-long-random-secret
+API_READ_ACCESS=your-tmdb-read-access-token
+API_KEY=your-tmdb-api-key
 ```
 
-## 8. Add HTTPS With a Domain
+7. Click Create Web Service.
 
-In your domain DNS, create an `A` record:
+## 5. Verify Deployment
+
+After deploy, open:
 
 ```text
-Type: A
-Name: @
-Value: YOUR_VM_PUBLIC_IP
+https://YOUR-APP.onrender.com/health
 ```
 
-For `www`:
+Expected:
 
-```text
-Type: A
-Name: www
-Value: YOUR_VM_PUBLIC_IP
-```
-
-Then on the VM:
-
-```bash
-sudo nano /etc/caddy/Caddyfile
-```
-
-Use:
-
-```text
-your-domain.com {
-  reverse_proxy localhost:3000
+```json
+{
+  "ok": true,
+  "service": "vmax",
+  "mongo": "connected"
 }
 ```
 
-For `www` too:
+If Mongo still says `connecting`, wait a few seconds and refresh.
+
+Then open:
 
 ```text
-your-domain.com, www.your-domain.com {
-  reverse_proxy localhost:3000
-}
+https://YOUR-APP.onrender.com/api/warmup
+https://YOUR-APP.onrender.com
 ```
 
-Reload Caddy:
+## 6. Test Frontend + Backend
 
-```bash
-sudo systemctl reload caddy
-```
+1. Open the app URL.
+2. Create an account.
+3. Sign in.
+4. Create a room.
+5. Copy the room code.
+6. Open incognito or another browser.
+7. Sign in there too.
+8. Join the room.
+9. In browser one, click Watch in Room.
+10. Confirm browser two opens the same movie.
+11. Test chat, play, pause, and seek.
 
-Open:
+## 7. Custom Domain
+
+1. In Render, open the `vmax` service.
+2. Go to Settings.
+3. Go to Custom Domains.
+4. Add your domain.
+5. Render shows DNS records.
+6. Add those records at your domain provider.
+7. Wait for Render to issue SSL.
+
+After that, the same app works at:
 
 ```text
 https://your-domain.com
+https://your-domain.com/api/warmup
 https://your-domain.com/health
 ```
 
-## 9. Updating After Code Changes
+No frontend code change is needed because the browser uses `window.location.origin`.
 
-On the VM:
+## 8. Updating the App
 
-```bash
-cd VMAX
-git pull
-npm install
-npm run pm2:restart
-```
-
-## 10. Room Sync Test
-
-1. Sign in on browser one.
-2. Create a room.
-3. Copy the room code.
-4. Open incognito or another browser.
-5. Join the room.
-6. In browser one, click Watch in Room.
-7. Confirm browser two opens the same movie.
-8. Test play, pause, and seek.
-
-## Useful Commands
+After you change code:
 
 ```bash
-pm2 status
-npm run pm2:logs
-npm run pm2:restart
-pm2 stop vmax
+git add .
+git commit -m "Your change"
+git push
 ```
+
+Render auto-deploys from GitHub.
+
+## 9. If Cold Starts Still Feel Bad
+
+Best free-plan options:
+
+- Open `/api/warmup` once before sharing the room link.
+- Keep the first request simple and wait for `/health` to return.
+- Upgrade Render to a paid instance when you want no spin-down.
+
+Free Render can be made smoother, but not truly always-on.
